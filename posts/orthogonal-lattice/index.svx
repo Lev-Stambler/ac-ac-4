@@ -1,6 +1,0 @@
-<<script>
-	
-</script>
-# Orthogonal Lattices
-
-<iframe src="/projects/lattice-radially-monotone/main.pdf" />
