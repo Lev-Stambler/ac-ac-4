@@ -1,0 +1,221 @@
+\documentclass[12pt]{article}
+\usepackage{braket}
+
+\usepackage{CSTheoryToolkitCMUStyle}
+
+\begin{document}
+
+\newcommand{\biggestvec}{\tilde{bl}}
+\begin{titlepage}
+\title{Algorithmic Bounds on Radially Monotone Functions Over Integer Lattices}
+\end{titlepage}
+
+
+\section*{Problem Statement and why we should care}
+Say we had an $n$ dimensional lattice $\Lambda$ where
+$
+	\Lambda = \{B{z} : {z} \in \Z \}
+$
+for $B \in \Z^{n \times n}$ where $b_1, b_2, ..., b_n$ are column vectors of $B$.
+Moreover, we are only going to worry about orthogonal lattices, i.e. all the basis vectors are orthogonal.
+
+Now say we have a radially monotone function $f : \R^n \rightarrow \R$.
+WLOG (we'll touch on the other case later), assume that $f(x) \geq f(x')$ for all $||x|| \leq ||x'||$ where $||.||$ denotes
+the L2 norm.
+
+Now, we will provide an algorithm for computing upper and lower bounds on 
+
+$$
+	\sum_{p \in V \bigcap \Lambda} f(p)
+$$
+
+where $V \subseteq \R^n$ and we can find $\int_{x \in V} f(x) \; dx$.
+
+% <!-- TODO: why we should care -->
+
+\section*{Algorithm Outline}
+Say that we are looking for an approximation summing over convex, continuous region $R$ containing the origin.
+We can parametrize $R$ with a function $r : [0, 2\pi]^{n-1} \rightarrow \R \setminus \R^-$.
+In other words, 
+as a function of $n - 1$ angles $\theta_1, ... \theta_{n-1}$ where $r(\theta_1, ..., \theta_{n-1})$ gives the radius 
+of the furthest point from the origin for the ray starting at the origin with angle $\theta_1, ..., \theta_{n-1}$.
+Then,
+$$
+	R = \set{ \bigcup_{\theta_1, ..., \theta_{n-1}} [0, r(\theta_1, ..., \theta_{n-1})] }.
+$$
+Now, define 
+$$
+	\biggestvec = \sqrt{\sum_{i \in [n]} ||b_i||^2}.
+$$
+In other words, $\biggestvec$ is the length of the largest vector in a Voroni region.
+
+Now, define the region $R_l$ ($l$ for larger!) by
+$$
+	\set{ \bigcup_{\theta_1, ..., \theta_{n-1}} [0, r(\theta_1, ..., \theta_{n-1}) + \biggestvec] }.
+$$
+and $R_s$ ($s$ for smaller) by 
+$$
+	\set{ \bigcup_{\theta_1, ..., \theta_{n-1}} [\biggestvec, \max\left(0, r(\theta_1, ..., \theta_{n-1}) - \biggestvec\right)] }.
+$$
+$R_l$ and $R_s$ can be respectively thought of as an expanded out and contracted in version of $R$
+by $\biggestvec$ respectively.
+Moreover, for $S \subseteq [n]$, define $P_S$ as a projector to the subspace spanned by $b_{S_1}, b_{S_2}, ..., b_{S_k}$ for
+$k = |S|$.
+
+A general outline of the algorithm follows:
+\begin{algorithm}
+	\caption{Estimate for a radially non-decreasing function}
+	\begin{algorithmic}[1]
+		\State $ub = 0$
+		\State $lb = 0$
+		\State $\mathrm{sets} = \mathrm{Powerset}([n])$
+		\For{$S \in \mathrm{sets}$}
+			\State $ub \pluseq \frac{ 
+					\int_{x \in P_S R_l} f(x) dx
+				}{
+					\mathrm{Vol}(P_S V)
+				}$
+			\State $lb \pluseq \frac{ 
+					\int_{x \in P_S R_s} f(x) dx
+				}{
+					\mathrm{Vol}(P_S V)
+				}$
+		\EndFor
+		\item \text{\bf{end for}}
+		
+	\end{algorithmic}
+\end{algorithm}
+
+\section*{Proof}
+To show the correctness of the algorithm, we first need to prove a few lemmas
+
+\begin{lemma}
+	\label{lemma:lin-alg}
+	For some $x \in \Lambda$, $x = Bz$ for $z \in \Z^n$, and $S \subseteq [n]$, 
+	$$||x + \sum_{i \in S} \pm b_i||^2 = x^2 + \sum_{i \in [S]} (\pm 2 z_i + 1)||b_i||^2.$$
+	\begin{proof}
+		\begin{align*}
+		||x + \sum_{i \in S} \pm b_i||^2 &= ||x||^2 + \sum_{i \in S} \pm 2 \braket{b_i,  x} + \sum_{i, j \in S}\Delta_i \Delta_j \braket{b_i,  b_j} \\
+		&= x^2 + \sum_{i \in S} \pm 2 \braket{b_i,  x} + \sum_{i \in S} ||b_i||^2
+		\end{align*}
+		and
+		\begin{align*}
+			\braket{b_i, x} &= \braket{ b_i,  z_i b_i } + \sum_{j \in [n] \setminus \{i\}} \braket{ b_i,  z_j b_j } \\
+			&= z_i \braket{ b_i,\, b_i } = z_i ||b_i||^2.
+		\end{align*}
+	\end{proof}
+\end{lemma}
+
+
+
+% <!-- TODO: link what Voroni region is -->
+\begin{theorem}[Unique Furthest Point]
+	\label{theorem:unique-furthest-point}
+	For a Voroni region, $V$, in a lattice defined by $\Lambda$, there is a furthest $p \in \Lambda \; \cap \; V$
+	from the origin (i.e. has the largest L2 norm). Moreover, this point has a larger L2 norm than all other points in $V$.
+	\begin{proof}
+		First we show that each $V$ has only 1 furthest point. Note that each $V$ can be defined by a point $p_v$ 
+		such that
+		$$
+			V \cap \Lambda = \set{p_v + \sum_{i \in S} b_i : S \subseteq [n]}.
+		$$
+		Then, we will explicitly construct a unique furthest point in $V$ by specifying an
+		$S_l \subseteq [n]$ where $p_v \sum_{i \in S_l} b_i$ is the furthest point.
+
+		We construct $S_l$ with the following algorithm: for all $i \in [n]$, if and only if $||p_v + b_i|| > ||p_v||$ add $i$ to $S_l$.
+		
+		Then, AFSOC, that for some set 
+		$S \neq S_l$,    \
+		$||p_v + \sum_{i \in S} b_i|| \geq ||p_v + \sum_{i \in S_l} b_i ||$.
+
+		So
+		$$
+		||\sum_{i \in S} p_v + b_i||^2 = ||p_v||^2 + \sum_{i \in S} (1 + 2z_i)||b_i||^2 \geq
+			||\sum_{i \in S_l} p_v + b_i||^2 = ||p_v||^2 + \sum_{i \in S_l} (1 + 2z_i)||b_i||^2 
+		$$
+
+		So, 
+		$$
+		\sum_{i \in S} (1 + 2z_i)||b_i||^2 \geq \sum_{i \in S_l} (1 + 2z_i)||b_i||^2.
+		$$
+		But, this would mean that
+		$i \not \in S_l, (1 + 2z_i)||b_i||^2$ is positive for $i \in S$
+		or 
+		$(1 + 2z_i)||b_i||^2$ is negative for $i \in S_l$. But, both cases are not possible given
+		our construction of $S_l$.
+	
+	\end{proof}
+\end{theorem}
+
+\begin{theorem}[Furthest Point is Injective]
+	For Voroni regions $V_1, V_2$ and $V_1 \neq V_2$ and
+	their respective furthest points $p_1, p_2$, we have that $p_1 \neq p_2$.
+
+	\begin{proof}
+		AFSOC $V_1 \neq V_2$ but $p_1 = p_2$. Then by \ref{theorem:unique-furthest-point}, there 
+		exists a unique $\Delta_1, \Delta_2 \in \set{-1, 1}^n$
+		such that for all $i \in [n]$,
+		$||p_1|| > ||p_1 + \Delta_{1, i} b_i||$
+		and $||p_2|| > ||p_2 + \Delta_{2, i} b_i||$.
+		Note that for each $i$ and fixed $p$, $\Delta_i$ is unique for that $p$.
+		So $\Delta_{1, i} = \Delta_{2, i}$ and $V_1 = V_2$. Thus, we reach our desired contradiction.
+	\end{proof}
+	
+\end{theorem}
+% <!-- TODO: clean up and put the below orthogonal thingies up in an OG lemma... -->
+
+\begin{theorem}[Not a Furthest Point]
+	For an orthogonal lattice $\Lambda$, the only lattice points which are not uniquely associated to be the furthest point of a Voroni region are those which lie along some projection of a subset of the basis. More formally, $p$ is not a furthest point if and only if
+	$p \in T$
+	where 
+	$$
+		T = \{ Bz : z \in \Z\;\mathrm{ and }\;\exists\; i \in [n]\; \mathrm{such \; that}\; z_i = 0\}.
+	$$
+	\begin{proof}
+		First we will show that if $p$ is not a unique furthest point then it is an element of $T$ via the contrapositive.
+		Assume that $x \in \Lambda \setminus T$. 
+		Then, let $z \in \Z^n$ such that $x = Bz$.
+		We now want to show that $x$ is a unique furthest point.
+
+		We will do this by explicitly constructing a Voroni region where $x$ is the furthest point.
+		We will show that for $\Delta \in \{-1, 1\}^n$ such that $\forall S \subseteq [n]$ except for the empty set, 
+		$$
+		||x + \sum_{i \in S} \Delta_i b_i|| < ||x||.
+		$$
+
+		In other words, $\Delta$ gives us an ``update vector" which explicitly constructs a Voroni region where $x$ is the unique furthest point. We now give a way to construct such a $\Delta$. 
+		For $i \in [n]$, if $x_i > 0$ then $||x - b_i|| < ||x||$,
+		if $x_i < 0$, then $||x + b_i|| < ||x||$.
+		Then, we fix $\Delta$ such that $\forall i \in [n]$, $||x + \Delta_i b_i|| < ||x||$.
+		Next, we note that by lemma \ref{lemma:lin-alg},
+		$$
+		||x + \sum_{i \in S} \Delta_i b_i||^2 = x^2 + \sum_{i \in [S]} (2\Delta_i z_i + 1)||b_i||^2.
+		$$
+		So, we can choose $\Delta$ such that
+		$||x + \sum_{i \in S} \Delta_i b_i|| = \sqrt{x^2 - \sum_{i \in [S]} (2 z_i - 1)||b_i||^2} < ||x||.$
+
+		% <!-- TODO: do we have to say something about the above always being real...? I mean idk  -->
+
+		Now to prove the backwards direction.
+		Let $p \in T$ and $p = Bz$. Let $i \in [n]$ such that $z_i = 0$.
+		Then note that any Voroni region containing $p$ also contains either $p + b_i$ or $p - b_i$.
+		So,
+		\begin{align*}
+			||p \pm b_i||^2 &= ||p||^2 \pm 2\braket{ p,  b_i } + ||b_i||^2\\
+			&= ||p||^2 \pm 0 ||b_i||^2 + ||b_i||^2 \\
+			&> ||p||.
+		\end{align*}
+		We can thus see that $p$ cannot be a unique furthest point.
+
+
+	\end{proof}
+\end{theorem}
+
+We are now ready to prove the correctness of the algorithm.
+% TODO: next steps
+
+\section*{Some applications}
+
+\section*{Some Numerical Results}
+
+\end{document}
